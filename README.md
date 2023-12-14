@@ -6,6 +6,7 @@ It will prompt you with instructions on your first start. If you already have `C
 
 ## Installation
 
+0. Requires python 3.10+
 1. Put the files in the right place
 ```
 $ git clone https://github.com/gptlang/CopilotChat.nvim
@@ -16,8 +17,17 @@ $ cp -r --backup=nil rplugin ~/.config/nvim/
 ```
 $ pip install -r requirements.txt
 ```
-3. Open up Neovim and run `:UpdateRemotePlugins`
-4. Restart Neovim
+3. `export PYTHONPATH="$HOME/.config/nvim/rplugin/python3"`
+4. Open up Neovim and run `:UpdateRemotePlugins` (this updates
+   `~/.local/share/nvim/rplugin.vim` to have (can we set PYTHONPATH in here?):
+   ```
+    " python3 plugins
+    call remote#host#RegisterPlugin('python3', '/home/ubuntu/.config/nvim/rplugin/python3/plugin.py', [
+          \ {'sync': v:false, 'name': 'CopilotChat', 'type': 'command', 'opts': {'nargs': '1'}},
+         \ ])
+   ```
+5. Restart Neovim
+
 
 ## Usage
 
