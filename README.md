@@ -33,3 +33,24 @@ $ pip install -r requirements.txt
 
 1. Yank some code into the unnamed register (`y`)
 2. `:CopilotChat What does this code do?`
+
+Possible workflow:
+
+1. open a file in nvim
+2. do `:vsplit` followed by `:enew` followed by `:setlocal buftype=nofile bufhidden=hide noswapfile wrap linebreak nonu` to open a scratch file
+3. (always) chat in this buffer. Eg: `:CopilotChat hi there!`
+4. go to another buffer (eg, the file you opened with) and yank (y) a function into a buffer. Go back to the scratch file (a limitation of the CopilotChat.nvim is it will open a new scratch file if the current buffer is not one)
+5. chat about the context in the unnamed buffer that was yanked:
+  * `:CopilotChat explain this function`
+  * `:CopilotChat write documentation for this function`
+  * `:CopilotChat write unit tests for this function`
+  * `:CopilotChat how can this function be made better?`
+6. copy (yank) and paste from the scratch buffer into other buffers to incorporate the changes
+
+
+## TODO
+
+* make it work with 3.8 (focal) and 3.10 (jammy)
+* use a named buffer instead of a scratch file
+* be able to use :CopilotChat from any buffer
+* add a marker at the end of the chat output (eg `--` or `## DONE` or ...)
