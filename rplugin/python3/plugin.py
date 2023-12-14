@@ -41,7 +41,7 @@ class TestPlugin(object):
         if self.nvim.eval("getbufvar(bufnr(), '&buftype')") != "nofile":
             # Create a new scratch buffer to hold the chat
             self.nvim.command("enew")
-            self.nvim.command("setlocal buftype=nofile bufhidden=hide noswapfile")
+            self.nvim.command("setlocal buftype=nofile bufhidden=hide noswapfile wrap linebreak nonu")
         if self.nvim.current.line != "":
             self.nvim.command("normal o")
         for token in self.copilot.ask(prompt, code, language=file_type):
