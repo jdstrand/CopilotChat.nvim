@@ -18,10 +18,8 @@ LOGIN_HEADERS = {
 
 
 class Copilot:
-    def __init__(self, token: str = ""):
-        if token == "":
-            token = get_cached_token()
-        self.github_token = token
+    def __init__(self):
+        self.github_token = get_cached_token()
         self.token: Dict[str, Any] = {}
         self.chat_history: List[Message] = []
         self.vscode_sessionid: str = ""
@@ -129,10 +127,7 @@ def get_input(session: PromptSession, text: str = ""):
 
 
 def main():
-    token = os.getenv("COPILOT_TOKEN")
-    if token is None:
-        token = ""
-    copilot = Copilot(token)
+    copilot = Copilot()
     if copilot.github_token is None:
         req = copilot.request_auth()
         print("Please visit", req["verification_uri"], "and enter", req["user_code"])
@@ -167,11 +162,8 @@ class TestPlugin(object):
     def __init__(self, nvim: pynvim.Nvim):
         self.nvim = nvim
         self.winid = -1
-        token = os.getenv("COPILOT_TOKEN")
-        if token is None:
-            token = ""
-        self.copilot = Copilot(token)
-        if self.copilot.github_token is None:
+        self.copilot = Copilot()
+        if len(self.copilot.github_token) == 0:
             req = self.copilot.request_auth()
             self.nvim.out_write(
                 f"Please visit {req['verification_uri']} and enter the code {req['user_code']}\n"
@@ -189,7 +181,7 @@ class TestPlugin(object):
 
     @pynvim.command("CopilotChat", nargs=1)
     def copilotChat(self, args: List[str]):
-        if self.copilot.github_token is None:
+        if len(self.copilot.github_token) == 0:
             self.nvim.out_write("Please authenticate with Copilot first\n")
             return
         prompt = " ".join(args)
