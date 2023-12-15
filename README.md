@@ -87,6 +87,5 @@ Just the chat:
 
 ## TODO
 
-* use a named buffer instead of a scratch file
-* be able to use :CopilotChat from any buffer
 * add a marker at the end of the chat output (eg `--` or `## DONE` or ...)
+* make it so that writing always happens in the chat buffer

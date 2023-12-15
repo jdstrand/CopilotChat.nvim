@@ -174,6 +174,7 @@ dotenv.load_dotenv()
 class TestPlugin(object):
     def __init__(self, nvim: pynvim.Nvim):
         self.nvim = nvim
+        self.winid = -1
         token = os.getenv("COPILOT_TOKEN")
         if token is None:
             token = ""
@@ -204,13 +205,21 @@ class TestPlugin(object):
         # Get code from the unnamed register
         code = self.nvim.eval("getreg('\"')")
         file_type = self.nvim.eval("expand('%')").split(".")[-1]
-        # Check if we're already in a chat buffer
-        if self.nvim.eval("getbufvar(bufnr(), '&buftype')") != "nofile":
-            # Create a new scratch buffer to hold the chat
+
+        # The window id never changes within a nvim session, so it it isn't
+        # set, set up a new scratch buffer to hold the chat
+        if self.winid == -1:
             self.nvim.command("enew")
-            self.nvim.command(
-                "setlocal buftype=nofile bufhidden=hide noswapfile wrap linebreak nonu"
-            )
+            self.nvim.command("setlocal buftype=nofile bufhidden=hide")
+            self.nvim.command("setlocal noswapfile wrap linebreak nonu")
+            self.winid = self.nvim.eval("win_getid()")
+
+        # Since windows numbers change, lookup the window number from the
+        # window id and move to it. This makes it so you can do 'CopilotChat'
+        # in a different window and move the focus back to the chat window
+        winnr = self.nvim.eval("win_id2win(%d)" % self.winid)
+        self.nvim.command('exe %d .. "wincmd w"' % winnr)
+
         if self.nvim.current.line != "":
             self.nvim.command("normal o")
         for token in self.copilot.ask(prompt, code, language=file_type):
