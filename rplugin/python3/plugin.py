@@ -1,16 +1,12 @@
-import requests
-import dotenv
-import os
-import uuid
-import time
 import json
-from typing import Any, Dict, List
-
+import os
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
+import requests
+import time
+from typing import Any, Dict, List
+import uuid
 
-# import utilities
-# import typings
 
 LOGIN_HEADERS = {
     "accept": "application/json",
@@ -133,7 +129,6 @@ def get_input(session: PromptSession, text: str = ""):
 
 
 def main():
-    dotenv.load_dotenv()
     token = os.getenv("COPILOT_TOKEN")
     if token is None:
         token = ""
@@ -163,11 +158,8 @@ if __name__ == "__main__":
 
 # plugin.py
 import pynvim
-import dotenv
 import os
 import time
-
-dotenv.load_dotenv()
 
 
 @pynvim.plugin

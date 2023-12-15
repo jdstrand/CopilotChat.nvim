@@ -23,7 +23,7 @@ First install dependencies:
 ```
 $ pip install -r requirements.txt
 # or
-$ sudo apt-get install python3-dotenv python3-requests python3-pynvim python3-prompt-toolkit
+$ sudo apt-get install python3-requests python3-pynvim python3-prompt-toolkit
 ```
 
 Then choose an installation method (below)
