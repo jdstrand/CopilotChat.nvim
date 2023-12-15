@@ -203,8 +203,9 @@ class TestPlugin(object):
         prompt = " ".join(args)
 
         # Get code from the unnamed register
-        code = self.nvim.eval("getreg('\"')")
-        file_type = self.nvim.eval("expand('%')").split(".")[-1]
+        code = str(self.nvim.eval("getreg('\"')"))
+        # Get the extension. Crude, but works so far...
+        file_type = str(self.nvim.eval("expand('%')")).split(".")[-1]
 
         # The window id never changes within a nvim session, so it it isn't
         # set, set up a new scratch buffer to hold the chat
