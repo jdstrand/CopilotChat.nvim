@@ -162,6 +162,7 @@ class TestPlugin(object):
     def __init__(self, nvim: pynvim.Nvim):
         self.nvim = nvim
         self.winid = -1
+        self.responded = False
         self.copilot = Copilot()
         if len(self.copilot.github_token) == 0:
             req = self.copilot.request_auth()
@@ -205,8 +206,20 @@ class TestPlugin(object):
         winnr = self.nvim.eval("win_id2win(%d)" % self.winid)
         self.nvim.command('exe %d .. "wincmd w"' % winnr)
 
-        if self.nvim.current.line != "":
+        # always jump to the last line so we don't overwrite existing chat
+        self.nvim.command(
+            "call nvim_win_set_cursor(0, [%d, 0])" % len(self.nvim.current.buffer)
+        )
+        if self.responded:
             self.nvim.command("normal o")
+            self.nvim.command("normal o")
+        else:
+            self.responded = True
+
+        self.nvim.current.line += "-- Copilot response --"
+        self.nvim.command("normal o")
+        self.nvim.command("normal o")
+
         for token in self.copilot.ask(prompt, code, language=file_type):
             if "\n" not in token:
                 self.nvim.current.line += token
