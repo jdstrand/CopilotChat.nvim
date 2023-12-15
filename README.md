@@ -48,6 +48,10 @@ Possible workflow:
   * `:CopilotChat how can this function be made better?`
 6. copy (yank) and paste from the scratch buffer into other buffers to incorporate the changes
 
+Just the chat:
+1. `nvim`
+2. `:CopilotChat ...`
+
 
 ## TODO
 
