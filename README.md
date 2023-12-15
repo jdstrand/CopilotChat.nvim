@@ -16,9 +16,10 @@ $ cp -r --backup=nil rplugin ~/.config/nvim/
 2. Install dependencies
 ```
 $ pip install -r requirements.txt
+# or
+$ sudo apt-get install python3-dotenv python3-requests python3-pynvim python3-prompt-toolkit
 ```
-3. `export PYTHONPATH="$HOME/.config/nvim/rplugin/python3"`
-4. Open up Neovim and run `:UpdateRemotePlugins` (this updates
+3. Open up Neovim and run `:UpdateRemotePlugins` (this updates
    `~/.local/share/nvim/rplugin.vim` to have (can we set PYTHONPATH in here?):
    ```
     " python3 plugins
@@ -26,7 +27,7 @@ $ pip install -r requirements.txt
           \ {'sync': v:false, 'name': 'CopilotChat', 'type': 'command', 'opts': {'nargs': '1'}},
          \ ])
    ```
-5. Restart Neovim
+4. Restart Neovim
 
 
 ## Usage
@@ -50,7 +51,6 @@ Possible workflow:
 
 ## TODO
 
-* make it work with 3.8 (focal) and 3.10 (jammy)
 * use a named buffer instead of a scratch file
 * be able to use :CopilotChat from any buffer
 * add a marker at the end of the chat output (eg `--` or `## DONE` or ...)
