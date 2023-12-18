@@ -196,8 +196,9 @@ class TestPlugin(object):
         # set, set up a new scratch buffer to hold the chat
         if self.winid == -1:
             self.nvim.command("enew")
-            self.nvim.command("setlocal buftype=nofile bufhidden=hide")
-            self.nvim.command("setlocal noswapfile wrap linebreak nonu")
+            self.nvim.command("setlocal buftype=nofile bufhidden=hide noswapfile")
+            self.nvim.command("setlocal wrap linebreak nonu")
+            self.nvim.command("setlocal filetype=markdown")
             self.winid = self.nvim.eval("win_getid()")
 
         # Since windows numbers change, lookup the window number from the
