@@ -70,7 +70,7 @@ $ cp -r --backup=nil rplugin ~/.config/nvim/
 Possible workflow:
 
 1. open a file in nvim
-2. do `:vsplit` followed by `:enew` followed by `:setlocal buftype=nofile bufhidden=hide noswapfile wrap linebreak nonu` to open a scratch file
+2. do `:vsplit` followed by `:enew` followed by `:setlocal buftype=nofile bufhidden=hide noswapfile wrap linebreak nonu ft=markdown` to open a scratch file
 3. (always) chat in this buffer. Eg: `:CopilotChat hi there!`
 4. go to another buffer (eg, the file you opened with) and yank (y) a function into a buffer. Go back to the scratch file (a limitation of the CopilotChat.nvim is it will open a new scratch file if the current buffer is not one)
 5. chat about the context in the unnamed buffer that was yanked:
