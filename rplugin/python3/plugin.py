@@ -305,6 +305,8 @@ class CopilotChatPlugin(object):
         end_separator = "\n---\n"
         buf.append(end_separator.split("\n"), -1)
 
+        # Put cursor at end
+        self.nvim.command("normal G")
 
 # from prompts.py
 # pylint: disable=locally-disabled, multiple-statements, fixme, line-too-long
