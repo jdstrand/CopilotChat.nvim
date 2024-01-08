@@ -16,6 +16,7 @@ class Message:
     content: str
     role: str
 
+
 @dataclass
 class FileExtract:
     filepath: str
@@ -108,11 +109,14 @@ class Copilot:
         elif prompt == EXPLAIN_SHORTCUT:
             system_prompt = COPILOT_EXPLAIN
         data = generate_request(
-            self.chat_history, code, language, system_prompt=system_prompt)
+            self.chat_history, code, language, system_prompt=system_prompt
+        )
 
         full_response = ""
 
-        response = self.session.post(url, headers=self._headers(), json=data, stream=True)
+        response = self.session.post(
+            url, headers=self._headers(), json=data, stream=True
+        )
         for line in response.iter_lines():
             line = line.decode("utf-8").replace("data: ", "").strip()
             if line.startswith("[DONE]"):
@@ -143,7 +147,7 @@ class Copilot:
             if i + 18 > len(inputs):
                 data = generate_embedding_request(inputs[i:])
             else:
-                data = generate_embedding_request(inputs[i:i + 18])
+                data = generate_embedding_request(inputs[i : i + 18])
             response = self.session.post(url, headers=self._headers(), json=data).json()
             if "data" not in response:
                 raise Exception(f"Error fetching embeddings: {response}")
@@ -164,6 +168,7 @@ class Copilot:
             "content-type": "application/json",
             "user-agent": "GitHubCopilotChat/0.12.2023120701",
         }
+
 
 def get_input(session: PromptSession, text: str = ""):
     print(text, end="", flush=True)
@@ -580,12 +585,14 @@ def generate_request(
         "messages": messages,
     }
 
+
 def generate_embedding_request(inputs: list[FileExtract]):
     return {
         "input": [
-            f"File: `{i.filepath}`\n```{i.filepath.split('.')[-1]}\n{i.code}```" for i in inputs
+            f"File: `{i.filepath}`\n```{i.filepath.split('.')[-1]}\n{i.code}```"
+            for i in inputs
         ],
-        "model": "copilot-text-embedding-ada-002"
+        "model": "copilot-text-embedding-ada-002",
     }
 
 
