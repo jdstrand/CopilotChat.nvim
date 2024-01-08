@@ -279,6 +279,7 @@ class CopilotChatPlugin(object):
 
         # Add start separator
         start_separator = f"""### You
+
 {prompt}
 
 ### Copilot
