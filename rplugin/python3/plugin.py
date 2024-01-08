@@ -211,25 +211,37 @@ class TestPlugin(object):
         self.nvim.command(
             "call nvim_win_set_cursor(0, [%d, 0])" % len(self.nvim.current.buffer)
         )
-        if self.responded:
-            self.nvim.command("normal o")
-            self.nvim.command("normal o")
-        else:
-            self.responded = True
 
-        self.nvim.current.line += "-- Copilot response --"
-        self.nvim.command("normal o")
-        self.nvim.command("normal o")
+        # Get the current buffer
+        buf = self.nvim.current.buffer
 
+        # Add start separator
+        start_separator = f"""### User
+{prompt}
+
+### Copilot
+
+"""
+        buf.append(start_separator.split("\n"), -1)
+
+        # Add chat messages
         for token in self.copilot.ask(prompt, code, language=file_type):
-            if "\n" not in token:
-                self.nvim.current.line += token
-                continue
-            lines = token.split("\n")
-            for i in range(len(lines)):
-                self.nvim.current.line += lines[i]
-                if i != len(lines) - 1:
-                    self.nvim.command("normal o")
+            buffer_lines = self.nvim.api.buf_get_lines(buf, 0, -1, 0)
+            last_line_row = len(buffer_lines) - 1
+            last_line_col = len(buffer_lines[-1])
+
+            self.nvim.api.buf_set_text(
+                buf,
+                last_line_row,
+                last_line_col,
+                last_line_row,
+                last_line_col,
+                token.split("\n"),
+            )
+
+        # Add end separator
+        end_separator = "\n---\n"
+        buf.append(end_separator.split("\n"), -1)
 
 
 # from prompts.py
