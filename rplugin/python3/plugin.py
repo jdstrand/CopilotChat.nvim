@@ -302,6 +302,9 @@ class CopilotChatPlugin(object):
                 token.split("\n"),
             )
 
+            # Put cursor at end after each output
+            self.nvim.command("normal G")
+
         # Add end separator
         end_separator = "\n---\n"
         buf.append(end_separator.split("\n"), -1)
