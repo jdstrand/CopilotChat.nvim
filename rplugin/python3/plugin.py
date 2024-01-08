@@ -278,7 +278,7 @@ class CopilotChatPlugin(object):
         buf = self.nvim.current.buffer
 
         # Add start separator
-        start_separator = f"""### User
+        start_separator = f"""### You
 {prompt}
 
 ### Copilot
