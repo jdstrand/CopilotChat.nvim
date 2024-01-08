@@ -145,7 +145,7 @@ class Copilot:
 
         self.chat_history.append(Message(full_response, "system"))
 
-    def _get_embeddings(self, inputs: list[FileExtract]):
+    def _get_embeddings(self, inputs: List[FileExtract]):
         embeddings = []
         url = "https://api.githubcopilot.com/embeddings"
         # If we have more than 18 files, we need to split them into multiple requests
@@ -594,7 +594,7 @@ def generate_request(
     }
 
 
-def generate_embedding_request(inputs: list[FileExtract]):
+def generate_embedding_request(inputs: List[FileExtract]):
     return {
         "input": [
             f"File: `{i.filepath}`\n```{i.filepath.split('.')[-1]}\n{i.code}```"
