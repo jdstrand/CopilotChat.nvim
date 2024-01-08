@@ -7,6 +7,22 @@ import time
 from typing import Any, Dict, List
 import uuid
 
+# from typings.py
+from dataclasses import dataclass
+
+
+@dataclass
+class Message:
+    content: str
+    role: str
+
+@dataclass
+class FileExtract:
+    filepath: str
+    code: str
+
+
+# from copilot.py
 
 LOGIN_HEADERS = {
     "accept": "application/json",
@@ -74,33 +90,29 @@ class Copilot:
         url = "https://api.github.com/copilot_internal/v2/token"
         headers = {
             "authorization": f"token {self.github_token}",
-            "editor-version": "vscode/1.80.1",
-            "editor-plugin-version": "copilot-chat/0.4.1",
-            "user-agent": "GitHubCopilotChat/0.4.1",
+            "editor-version": "vscode/1.85.1",
+            "editor-plugin-version": "copilot-chat/0.12.2023120701",
+            "user-agent": "GitHubCopilotChat//0.12.2023120701",
         }
 
         self.token = self.session.get(url, headers=headers).json()
 
     def ask(self, prompt: str, code: str, language: str = ""):
-        url = "https://copilot-proxy.githubusercontent.com/v1/chat/completions"
-        headers = {
-            "authorization": f"Bearer {self.token['token']}",
-            "x-request-id": str(uuid.uuid4()),
-            "vscode-sessionid": self.vscode_sessionid,
-            "machineid": self.machineid,
-            "editor-version": "vscode/1.80.1",
-            "editor-plugin-version": "copilot-chat/0.4.1",
-            "openai-organization": "github-copilot",
-            "openai-intent": "conversation-panel",
-            "content-type": "application/json",
-            "user-agent": "GitHubCopilotChat/0.4.1",
-        }
+        url = "https://api.githubcopilot.com/chat/completions"
         self.chat_history.append(Message(prompt, "user"))
-        data = generate_request(self.chat_history, code, language)
+        system_prompt = COPILOT_INSTRUCTIONS
+        if prompt == FIX_SHORTCUT:
+            system_prompt = COPILOT_FIX
+        elif prompt == TEST_SHORTCUT:
+            system_prompt = COPILOT_TESTS
+        elif prompt == EXPLAIN_SHORTCUT:
+            system_prompt = COPILOT_EXPLAIN
+        data = generate_request(
+            self.chat_history, code, language, system_prompt=system_prompt)
 
         full_response = ""
 
-        response = self.session.post(url, headers=headers, json=data, stream=True)
+        response = self.session.post(url, headers=self._headers(), json=data, stream=True)
         for line in response.iter_lines():
             line = line.decode("utf-8").replace("data: ", "").strip()
             if line.startswith("[DONE]"):
@@ -109,6 +121,9 @@ class Copilot:
                 continue
             try:
                 line = json.loads(line)
+                if "choices" not in line:
+                    print("Error:", line)
+                    raise Exception(f"No choices on {line}")
                 content = line["choices"][0]["delta"]["content"]
                 if content is None:
                     continue
@@ -120,6 +135,35 @@ class Copilot:
 
         self.chat_history.append(Message(full_response, "system"))
 
+    def _get_embeddings(self, inputs: list[FileExtract]):
+        embeddings = []
+        url = "https://api.githubcopilot.com/embeddings"
+        # If we have more than 18 files, we need to split them into multiple requests
+        for i in range(0, len(inputs), 18):
+            if i + 18 > len(inputs):
+                data = generate_embedding_request(inputs[i:])
+            else:
+                data = generate_embedding_request(inputs[i:i + 18])
+            response = self.session.post(url, headers=self._headers(), json=data).json()
+            if "data" not in response:
+                raise Exception(f"Error fetching embeddings: {response}")
+            for embedding in response["data"]:
+                embeddings.append(embedding["embedding"])
+        return embeddings
+
+    def _headers(self):
+        return {
+            "authorization": f"Bearer {self.token['token']}",
+            "x-request-id": str(uuid.uuid4()),
+            "vscode-sessionid": self.vscode_sessionid,
+            "machineid": self.machineid,
+            "editor-version": "vscode/1.85.1",
+            "editor-plugin-version": "copilot-chat/0.12.2023120701",
+            "openai-organization": "github-copilot",
+            "openai-intent": "conversation-panel",
+            "content-type": "application/json",
+            "user-agent": "GitHubCopilotChat/0.12.2023120701",
+        }
 
 def get_input(session: PromptSession, text: str = ""):
     print(text, end="", flush=True)
@@ -158,7 +202,7 @@ import time
 
 
 @pynvim.plugin
-class TestPlugin(object):
+class CopilotChatPlugin(object):
     def __init__(self, nvim: pynvim.Nvim):
         self.nvim = nvim
         self.winid = -1
@@ -186,6 +230,13 @@ class TestPlugin(object):
             self.nvim.out_write("Please authenticate with Copilot first\n")
             return
         prompt = " ".join(args)
+
+        if prompt == "/fix":
+            prompt = FIX_SHORTCUT
+        elif prompt == "/test":
+            prompt = TEST_SHORTCUT
+        elif prompt == "/explain":
+            prompt = EXPLAIN_SHORTCUT
 
         # Get code from the unnamed register
         code = str(self.nvim.eval("getreg('\"')"))
@@ -273,22 +324,213 @@ Keep your answers short and impersonal.
 Use Markdown formatting in your answers.
 Make sure to include the programming language name at the start of the Markdown code blocks.
 Avoid wrapping the whole response in triple backticks.
-The user works in an IDE called Visual Studio Code which has a concept for editors with open files, integrated unit test support, an output pane that shows the output of running the code as well as an integrated terminal.
+The user works in an IDE called NeoVim which has a concept for editors with open files, integrated unit test support, an output pane that shows the output of running the code as well as an integrated terminal.
 The active document is the source code the user is looking at right now.
 You can only give one reply for each conversation turn.
 You should always generate short suggestions for the next user turns that are relevant to the conversation and not offensive.
 
 """
 
+COPILOT_EXPLAIN = (
+    COPILOT_INSTRUCTIONS
+    + """
+You are an professor of computer science. You are an expert at explaining code to anyone. Your task is to help the Developer understand the code. Pay especially close attention to the selection context.
 
-# from typings.py
-from dataclasses import dataclass
+Additional Rules:
+Provide well thought out examples
+Utilize provided context in examples
+Match the style of provided context when using examples
+Say "I'm not quite sure how to explain that." when you aren't confident in your explanation
+When generating code ensure it's readable and indented properly
+When explaining code, add a final paragraph describing possible ways to improve the code with respect to readability and performance
+
+"""
+)
+
+COPILOT_TESTS = (
+    COPILOT_INSTRUCTIONS
+    + """
+You also specialize in being a highly skilled test generator. Given a description of which test case should be generated, you can generate new test cases. Your task is to help the Developer generate tests. Pay especially close attention to the selection context.
+
+Additional Rules:
+If context is provided, try to match the style of the provided code as best as possible
+Generated code is readable and properly indented
+don't use private properties or methods from other classes
+Generate the full test file
+Markdown code blocks are used to denote code
+
+"""
+)
+
+COPILOT_FIX = (
+    COPILOT_INSTRUCTIONS
+    + """
+You also specialize in being a highly skilled code generator. Given a description of what to do you can refactor, modify or enhance existing code. Your task is help the Developer fix an issue. Pay especially close attention to the selection or exception context.
+
+Additional Rules:
+If context is provided, try to match the style of the provided code as best as possible
+Generated code is readable and properly indented
+Markdown blocks are used to denote code
+Preserve user's code comment blocks, do not exclude them when refactoring code.
+
+"""
+)
+
+COPILOT_WORKSPACE = """You are a software engineer with expert knowledge of the codebase the user has open in their workspace.
+When asked for your name, you must respond with "GitHub Copilot".
+Follow the user's requirements carefully & to the letter.
+Your expertise is strictly limited to software development topics.
+Follow Microsoft content policies.
+Avoid content that violates copyrights.
+For questions not related to software development, simply give a reminder that you are an AI programming assistant.
+Keep your answers short and impersonal.
+Use Markdown formatting in your answers.
+Make sure to include the programming language name at the start of the Markdown code blocks.
+Avoid wrapping the whole response in triple backticks.
+The user works in an IDE called NeoVim which has a concept for editors with open files, integrated unit test support, an output pane that shows the output of running the code as well as an integrated terminal.
+The active document is the source code the user is looking at right now.
+You can only give one reply for each conversation turn.
+
+Additional Rules
+Think step by step:
+
+1. Read the provided relevant workspace information (code excerpts, file names, and symbols) to understand the user's workspace.
+
+2. Consider how to answer the user's prompt based on the provided information and your specialized coding knowledge. Always assume that the user is asking about the code in their workspace instead of asking a general programming question. Prefer using variables, functions, types, and classes from the workspace over those from the standard library.
+
+3. Generate a response that clearly and accurately answers the user's question. In your response, add fully qualified links for referenced symbols (example: [`namespace.VariableName`](path/to/file.ts)) and links for files (example: [path/to/file](path/to/file.ts)) so that the user can open them. If you do not have enough information to answer the question, respond with "I'm sorry, I can't answer that question with what I currently know about your workspace".
+
+Remember that you MUST add links for all referenced symbols from the workspace and fully qualify the symbol name in the link, for example: [`namespace.functionName`](path/to/util.ts).
+Remember that you MUST add links for all workspace files, for example: [path/to/file.js](path/to/file.js)
+
+Examples:
+Question:
+What file implements base64 encoding?
+
+Response:
+Base64 encoding is implemented in [src/base64.ts](src/base64.ts) as [`encode`](src/base64.ts) function.
 
 
-@dataclass
-class Message:
-    content: str
-    role: str
+Question:
+How can I join strings with newlines?
+
+Response:
+You can use the [`joinLines`](src/utils/string.ts) function from [src/utils/string.ts](src/utils/string.ts) to join multiple strings with newlines.
+
+
+Question:
+How do I build this project?
+
+Response:
+To build this TypeScript project, run the `build` script in the [package.json](package.json) file:
+
+```sh
+npm run build
+```
+
+
+Question:
+How do I read a file?
+
+Response:
+To read a file, you can use a [`FileReader`](src/fs/fileReader.ts) class from [src/fs/fileReader.ts](src/fs/fileReader.ts).
+"""
+
+TEST_SHORTCUT = "Write a set of detailed unit test functions for the code above."
+EXPLAIN_SHORTCUT = "Write a explanation for the code above as paragraphs of text."
+FIX_SHORTCUT = (
+    "There is a problem in this code. Rewrite the code to show it with the bug fixed."
+)
+
+EMBEDDING_KEYWORDS = """You are a coding assistant who help the user answer questions about code in their workspace by providing a list of relevant keywords they can search for to answer the question.
+The user will provide you with potentially relevant information from the workspace. This information may be incomplete.
+DO NOT ask the user for additional information or clarification.
+DO NOT try to answer the user's question directly.
+
+# Additional Rules
+Think step by step:
+1. Read the user's question to understand what they are asking about their workspace.
+
+2. If there are pronouns in the question, such as 'it', 'that', 'this', try to understand what they refer to by looking at the rest of the question and the conversation history.
+
+3. Output a precise version of question that resolves all pronouns to the nouns they stand for. Be sure to preserve the exact meaning of the question by only changing ambiguous pronouns.
+
+4. Then output a short markdown list of up to 8 relevant keywords that user could try searching for to answer their question. These keywords could used as file name, symbol names, abbreviations, or comments in the relevant code. Put the keywords most relevant to the question first. Do not include overly generic keywords. Do not repeat keywords.
+
+5. For each keyword in the markdown list of related keywords, if applicable add a comma separated list of variations after it. For example: for 'encode' possible variations include 'encoding', 'encoded', 'encoder', 'encoders'. Consider synonyms and plural forms. Do not repeat variations.
+
+# Examples
+
+User: Where's the code for base64 encoding?
+
+Response:
+
+Where's the code for base64 encoding?
+
+- base64 encoding, base64 encoder, base64 encode
+- base64, base 64
+- encode, encoded, encoder, encoders
+"""
+
+WORKSPACE_PROMPT = """You are a software engineer with expert knowledge of the codebase the user has open in their workspace.
+When asked for your name, you must respond with "GitHub Copilot".
+Follow the user's requirements carefully & to the letter.
+Your expertise is strictly limited to software development topics.
+Follow Microsoft content policies.
+Avoid content that violates copyrights.
+For questions not related to software development, simply give a reminder that you are an AI programming assistant.
+Keep your answers short and impersonal.
+Use Markdown formatting in your answers.
+Make sure to include the programming language name at the start of the Markdown code blocks.
+Avoid wrapping the whole response in triple backticks.
+The user works in an IDE called Neovim which has a concept for editors with open files, integrated unit test support, an output pane that shows the output of running the code as well as an integrated terminal.
+The active document is the source code the user is looking at right now.
+You can only give one reply for each conversation turn.
+
+Additional Rules
+Think step by step:
+
+1. Read the provided relevant workspace information (code excerpts, file names, and symbols) to understand the user's workspace.
+
+2. Consider how to answer the user's prompt based on the provided information and your specialized coding knowledge. Always assume that the user is asking about the code in their workspace instead of asking a general programming question. Prefer using variables, functions, types, and classes from the workspace over those from the standard library.
+
+3. Generate a response that clearly and accurately answers the user's question. In your response, add fully qualified links for referenced symbols (example: [`namespace.VariableName`](path/to/file.ts)) and links for files (example: [path/to/file](path/to/file.ts)) so that the user can open them. If you do not have enough information to answer the question, respond with "I'm sorry, I can't answer that question with what I currently know about your workspace".
+
+Remember that you MUST add links for all referenced symbols from the workspace and fully qualify the symbol name in the link, for example: [`namespace.functionName`](path/to/util.ts).
+Remember that you MUST add links for all workspace files, for example: [path/to/file.js](path/to/file.js)
+
+Examples:
+Question:
+What file implements base64 encoding?
+
+Response:
+Base64 encoding is implemented in [src/base64.ts](src/base64.ts) as [`encode`](src/base64.ts) function.
+
+
+Question:
+How can I join strings with newlines?
+
+Response:
+You can use the [`joinLines`](src/utils/string.ts) function from [src/utils/string.ts](src/utils/string.ts) to join multiple strings with newlines.
+
+
+Question:
+How do I build this project?
+
+Response:
+To build this TypeScript project, run the `build` script in the [package.json](package.json) file:
+
+```sh
+npm run build
+```
+
+
+Question:
+How do I read a file?
+
+Response:
+To read a file, you can use a [`FileReader`](src/fs/fileReader.ts) class from [src/fs/fileReader.ts](src/fs/fileReader.ts).
+"""
 
 
 # from utilities.py
@@ -302,11 +544,14 @@ def random_hex(length: int = 65):
 
 
 def generate_request(
-    chat_history: List[Message], code_excerpt: str, language: str = ""
+    chat_history: List[Message],
+    code_excerpt: str,
+    language: str = "",
+    system_prompt=COPILOT_INSTRUCTIONS,
 ):
     messages = [
         {
-            "content": COPILOT_INSTRUCTIONS,
+            "content": system_prompt,
             "role": "system",
         }
     ]
@@ -327,12 +572,20 @@ def generate_request(
         )
     return {
         "intent": True,
-        "model": "copilot-chat",
+        "model": "gpt-4",
         "n": 1,
         "stream": True,
         "temperature": 0.1,
         "top_p": 1,
         "messages": messages,
+    }
+
+def generate_embedding_request(inputs: list[FileExtract]):
+    return {
+        "input": [
+            f"File: `{i.filepath}`\n```{i.filepath.split('.')[-1]}\n{i.code}```" for i in inputs
+        ],
+        "model": "copilot-text-embedding-ada-002"
     }
 
 
