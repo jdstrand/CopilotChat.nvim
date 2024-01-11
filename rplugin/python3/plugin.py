@@ -119,9 +119,9 @@ class Copilot:
             response = self.session.post(
                 url, headers=self._headers(), json=data, stream=True
             )
-            if response:
+            if response:  # false when 4xx or 5xx
                 break
-            # try to authenticate if no response
+            # try to authenticate if response error
             self.authenticate()
 
         if response is None:  # error
