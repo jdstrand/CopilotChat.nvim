@@ -98,7 +98,7 @@ class Copilot:
 
         self.token = self.session.get(url, headers=headers).json()
 
-    def ask(self, prompt: str, code: str, language: str = ""):
+    def ask(self, prompt, code, language: str = "") -> Any:
         url = "https://api.githubcopilot.com/chat/completions"
         self.chat_history.append(Message(prompt, "user"))
         system_prompt = COPILOT_INSTRUCTIONS
@@ -114,9 +114,19 @@ class Copilot:
 
         full_response = ""
 
-        response = self.session.post(
-            url, headers=self._headers(), json=data, stream=True
-        )
+        response = None
+        for _ in range(2):
+            response = self.session.post(
+                url, headers=self._headers(), json=data, stream=True
+            )
+            if response:
+                break
+            # try to authenticate if no response
+            self.authenticate()
+
+        if response is None:  # error
+            return
+
         for line in response.iter_lines():
             line = line.decode("utf-8").replace("data: ", "").strip()
             if line.startswith("[DONE]"):
@@ -288,6 +298,7 @@ class CopilotChatPlugin(object):
         buf.append(start_separator.split("\n"), -1)
 
         # Add chat messages
+        resp: str = ""
         for token in self.copilot.ask(prompt, code, language=file_type):
             buffer_lines = self.nvim.api.buf_get_lines(buf, 0, -1, 0)
             last_line_row = len(buffer_lines) - 1
@@ -301,9 +312,14 @@ class CopilotChatPlugin(object):
                 last_line_col,
                 token.split("\n"),
             )
+            resp += token
 
             # Put cursor at end after each output
             self.nvim.command("normal G")
+
+        if len(resp.split("\n")) == 0:
+            self.nvim.command("echom 'Empty response from CopilotChat'")
+        self.nvim.command("echom ''")
 
         # Add end separator
         end_separator = "\n---\n"
