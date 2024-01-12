@@ -114,19 +114,9 @@ class Copilot:
 
         full_response = ""
 
-        response = None
-        for _ in range(2):
-            response = self.session.post(
-                url, headers=self._headers(), json=data, stream=True
-            )
-            if response:  # false when 4xx or 5xx
-                break
-            # try to authenticate if response error
-            self.authenticate()
-
-        if response is None:  # error
-            return
-
+        response = self.session.post(
+            url, headers=self._headers(), json=data, stream=True
+        )
         for line in response.iter_lines():
             line = line.decode("utf-8").replace("data: ", "").strip()
             if line.startswith("[DONE]"):
