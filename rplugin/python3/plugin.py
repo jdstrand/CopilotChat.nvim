@@ -4,7 +4,7 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
 import requests
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 import uuid
 
 # from typings.py
@@ -99,6 +99,11 @@ class Copilot:
         self.token = self.session.get(url, headers=headers).json()
 
     def ask(self, prompt, code, language: str = "") -> Any:
+        # If expired, reauthenticate
+        expires_at: Union[int, None] = self.token.get("expires_at")
+        if expires_at is None or expires_at <= round(time.time()):
+            self.authenticate()
+
         url = "https://api.githubcopilot.com/chat/completions"
         self.chat_history.append(Message(prompt, "user"))
         system_prompt = COPILOT_INSTRUCTIONS
