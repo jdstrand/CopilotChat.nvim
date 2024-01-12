@@ -207,10 +207,6 @@ def main():
             print(response, end="", flush=True)
 
 
-if __name__ == "__main__":
-    main()
-
-
 # plugin.py
 import pynvim
 import os
@@ -672,3 +668,7 @@ def get_cached_token():
 #            indent=2,
 #        )
 #    )
+
+
+if __name__ == "__main__":
+    main()
