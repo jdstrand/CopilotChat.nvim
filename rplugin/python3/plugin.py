@@ -262,6 +262,8 @@ class CopilotChatPlugin(object):
             self.nvim.command("setlocal buftype=nofile bufhidden=hide noswapfile")
             self.nvim.command("setlocal wrap linebreak nonu")
             self.nvim.command("setlocal filetype=markdown")
+            self.nvim.command("setlocal nospell")
+
             self.winid = self.nvim.eval("win_getid()")
 
         # Since windows numbers change, lookup the window number from the
