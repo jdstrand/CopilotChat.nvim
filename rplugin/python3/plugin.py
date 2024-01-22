@@ -303,7 +303,7 @@ class CopilotChatPlugin(object):
                 last_line_col,
                 last_line_row,
                 last_line_col,
-                token.split("\n"),
+                [x.rstrip() for x in token.split("\n")],  # no trailing spaces
             )
             resp += token
 
